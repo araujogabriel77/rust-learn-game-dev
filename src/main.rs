@@ -22,6 +22,17 @@ struct Player {
     sprite: Rect,
     speed: i32,
     direction: Direction,
+    current_frame: i32,
+}
+
+fn direction_spritesheet_row(direction:Direction) -> i32 {
+    use self::Direction::*;
+    match direction {
+        Up => 3,
+        Down => 0,
+        Left => 1,
+        Rigth => 2,
+    }
 }
 
 fn render(
@@ -34,15 +45,23 @@ fn render(
     canvas.clear();
 
     let (width, height) = canvas.output_size()?;
+    
+    let (frame_width, frame_heigth) = player.sprite.size();
+    let current_frame = Rect::new(
+        player.sprite.x() + frame_width as i32 * player.current_frame,
+        player.sprite.y() + frame_heigth as i32 * direction_spritesheet_row(player.direction),
+        frame_width,
+        frame_heigth,
+    );
 
     // Treat the center of the screen as the (0, 0) coordinate
     let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
     let screen_rect = Rect::from_center(
         screen_position,
-        player.sprite.width(),
-        player.sprite.height(),
+        frame_width,
+        frame_heigth,
     );
-    canvas.copy(texture, player.sprite, screen_rect)?;
+    canvas.copy(texture, current_frame, screen_rect)?;
 
     canvas.present();
 
@@ -67,6 +86,11 @@ fn update_player(player: &mut Player) {
         Down => {
             player.position = player.position.offset(0, player.speed);
         }
+    }
+    // Olny continue to animate if the player is moving
+    if player.speed != 0 {
+        //Cheat: using the fact that all animatiojns are 3 frames (NOT extensible)
+        player.current_frame = (player.current_frame + 1) % 3;
     }
 }
 
@@ -95,6 +119,7 @@ fn main() -> Result<(), String> {
         sprite: Rect::new(0, 0, 26, 36),
         speed: 0,
         direction: Direction::Right,
+        current_frame: 0,
     };
 
     let mut event_pump = sdl_context.event_pump()?;
